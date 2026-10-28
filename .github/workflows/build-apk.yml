@@ -1,3 +1,4 @@
+
 name: Build RinAI APK
 
 on:
@@ -25,36 +26,49 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Fix manifest
+      - name: Check Android manifest
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
+
           p = Path("app/src/main/AndroidManifest.xml")
-          s = p.read_text(encoding="utf-8").lstrip("\ufeff\r\n\t ")
+          s = p.read_text(encoding="utf-8")
+          s = s.lstrip("\ufeff\r\n\t ")
           p.write_text(s, encoding="utf-8")
           ET.parse(p)
-          print("Manifest OK")
+          print("Manifest XML OK")
           PY
 
- - name: Build APK
-  run: |
-    gradle assembleDebug --stacktrace --info > build.log 2>&1
-    RESULT=$?
-    grep -n -B 5 -A 12 -E "What went wrong:|e: file:|error:" build.log || tail -n 80 build.log
-    exit $RESULT
+      - name: Build APK
+        id: build_apk
+        continue-on-error: true
+        run: |
+          set +e
+          gradle assembleDebug --stacktrace --info > build.log 2>&1
+          result=$?
+          grep -n -B 5 -A 12 -E "What went wrong:|e: file:|error:" build.log || tail -n 80 build.log
+          exit $result
+
+      - name: Upload build log
+        if: steps.build_apk.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: RinAI-build-log
+          path: build.log
+          if-no-files-found: warn
+
+      - name: Stop if build failed
+        if: steps.build_apk.outcome == 'failure'
+        run: exit 1
+
       - name: Find APK
         run: |
-          echo "=== Searching for APK files ==="
-          find . -type f -name "*.apk" -print
-          echo "=== App build directory ==="
-          ls -R app/build/outputs || true
+          find app/build/outputs -type f -name "*.apk" -print
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RinAI-debug-APK
-          path: |
-            app/build/outputs/**/*.apk
-            app/build/outputs/**/*.aab
+          path: app/build/outputs/**/*.apk
           if-no-files-found: error
