@@ -26,14 +26,20 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Debug manifest contents
+      - name: Fix and check manifest
         run: |
-          echo "=== Manifest lines ==="
-          nl -ba app/src/main/AndroidManifest.xml | head -15
-          echo "=== First bytes ==="
-          python3 -c "print(repr(open('app/src/main/AndroidManifest.xml','rb').read(120)))"
-          echo "=== XML validation ==="
-          python3 -c "import xml.etree.ElementTree as ET; ET.parse('app/src/main/AndroidManifest.xml'); print('XML OK')"
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          path = Path("app/src/main/AndroidManifest.xml")
+          content = path.read_text(encoding="utf-8")
+          content = content.lstrip("\ufeff\r\n\t ")
+          path.write_text(content, encoding="utf-8")
+
+          ET.parse(path)
+          print("Manifest XML syntax OK")
+          PY
 
       - name: Build APK
         run: gradle assembleDebug --stacktrace --info
