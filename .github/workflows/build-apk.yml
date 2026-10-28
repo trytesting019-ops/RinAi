@@ -42,9 +42,20 @@ jobs:
           PY
 
       - name: Build APK
-        run: gradle assembleDebug --stacktrace --info
+        run: gradle assembleDebug --stacktrace --info 2>&1 | tee build.log
+
+      - name: Show Kotlin errors
+        if: always()
+        run: |
+          echo "=== Kotlin compiler errors ==="
+          if [ -f build.log ]; then
+            grep -n -E 'e: |error:|MainActivity.kt|What went wrong:' build.log || true
+          else
+            echo "build.log tidak dijumpai"
+          fi
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: RinAI-debug-APK
