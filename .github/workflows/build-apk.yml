@@ -26,18 +26,14 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Check manifest XML
+      - name: Debug manifest contents
         run: |
-          python3 - <<'PY'
-          import xml.etree.ElementTree as ET
-          path = "app/src/main/AndroidManifest.xml"
-          try:
-              ET.parse(path)
-              print("Manifest XML syntax OK")
-          except ET.ParseError as e:
-              print(f"Manifest XML parse error: {e}")
-              raise
-          PY
+          echo "=== Manifest lines ==="
+          nl -ba app/src/main/AndroidManifest.xml | head -15
+          echo "=== First bytes ==="
+          python3 -c "print(repr(open('app/src/main/AndroidManifest.xml','rb').read(120)))"
+          echo "=== XML validation ==="
+          python3 -c "import xml.etree.ElementTree as ET; ET.parse('app/src/main/AndroidManifest.xml'); print('XML OK')"
 
       - name: Build APK
         run: gradle assembleDebug --stacktrace --info
