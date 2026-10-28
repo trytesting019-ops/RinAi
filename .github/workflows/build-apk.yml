@@ -12,51 +12,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
       - name: Check Android manifest
         run: |
           python3 - <<'PY'
-          from pathlib import Path
           import xml.etree.ElementTree as ET
-
-          p = Path("app/src/main/AndroidManifest.xml")
-          s = p.read_text(encoding="utf-8").lstrip("\ufeff\r\n\t ")
-          p.write_text(s, encoding="utf-8")
-          ET.parse(p)
+          ET.parse("app/src/main/AndroidManifest.xml")
           print("Manifest XML OK")
           PY
 
-      - name: Build APK and show errors
-        id: build_apk
+      - name: Build APK
+        id: build
         shell: bash
         run: |
           set +e
-          gradle assembleDebug --stacktrace --info > build.log 2>&1
+          gradle assembleDebug --stacktrace > build.log 2>&1
           result=$?
-
-          echo "===== GRADLE BUILD LOG ====="
-          cat build.log
-          echo "===== END GRADLE BUILD LOG ====="
-
-          if [ "$result" -ne 0 ]; then
-            echo "BUILD_STATUS=FAILED"
-            exit "$result"
-          fi
-
-          echo "BUILD_STATUS=SUCCESS"
+          echo "===== ERROR SUMMARY ====="
+          grep -n -i -B 3 -A 8 -E "What went wrong|FAILURE:|Caused by:|Could not|error:" build.log | tail -n 60 || true
+          echo "===== LAST LOG LINES ====="
+          tail -n 40 build.log
+          exit "$result"
 
       - name: Upload build log
         if: always()
@@ -66,16 +52,10 @@ jobs:
           path: build.log
           if-no-files-found: warn
 
-      - name: Search for APK
-        if: success()
-        run: |
-          echo "===== APK FILES ====="
-          find app/build/outputs -type f -name "*.apk" -print
-
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: RinAI-debug-APK
-          path: app/build/outputs/**/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
