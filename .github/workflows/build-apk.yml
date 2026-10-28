@@ -44,9 +44,10 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          gradle assembleDebug --stacktrace > build.log 2>&1
+          gradle assembleDebug --stacktrace --info > build.log 2>&1
           result=$?
-          cat build.log
+          echo "===== GRADLE ERROR DETAILS ====="
+          grep -n -B 5 -A 15 -E "What went wrong:|Execution failed for task|Could not|error:" build.log || tail -n 100 build.log
           exit $result
 
       - name: Upload build log
