@@ -1,3 +1,4 @@
+
 name: Build RinAI APK
 
 on:
@@ -22,12 +23,29 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Check Android manifest
+      - name: Fix and check Android manifest
+        shell: bash
         run: |
           python3 - <<'PY'
+          from pathlib import Path
           import xml.etree.ElementTree as ET
-          ET.parse("app/src/main/AndroidManifest.xml")
-          print("Manifest XML OK")
+
+          p = Path("app/src/main/AndroidManifest.xml")
+          s = p.read_text(encoding="utf-8-sig")
+
+          start = s.find("<?xml")
+          if start < 0:
+              start = s.find("<manifest")
+          if start < 0:
+              raise SystemExit("ERROR: manifest tag not found")
+
+          s = s[start:].lstrip()
+          root = ET.fromstring(s)
+          if not root.tag.endswith("manifest"):
+              raise SystemExit("ERROR: invalid manifest root")
+
+          p.write_text(s.rstrip() + "\n", encoding="utf-8")
+          print("Manifest XML fixed and valid")
           PY
 
       - name: Build APK
@@ -37,10 +55,13 @@ jobs:
           set +e
           gradle assembleDebug --stacktrace > build.log 2>&1
           result=$?
+
           echo "===== ERROR SUMMARY ====="
           grep -n -i -B 3 -A 8 -E "What went wrong|FAILURE:|Caused by:|Could not|error:" build.log | tail -n 60 || true
+
           echo "===== LAST LOG LINES ====="
           tail -n 40 build.log
+
           exit "$result"
 
       - name: Upload build log
