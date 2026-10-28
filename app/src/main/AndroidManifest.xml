@@ -5,11 +5,10 @@
     <application
         android:allowBackup="false"
         android:label="Rin AI"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:usesCleartextTraffic="false">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <activity
-            android:name=".MainActivity"
+            android:name="my.rinai.offline.MainActivity"
             android:exported="true">
 
             <intent-filter>
@@ -18,5 +17,7 @@
             </intent-filter>
 
         </activity>
+
     </application>
+
 </manifest>
