@@ -41,14 +41,22 @@ jobs:
 
       - name: Build APK and show errors
         id: build_apk
-        continue-on-error: true
+        shell: bash
         run: |
+          set +e
           gradle assembleDebug --stacktrace --info > build.log 2>&1
           result=$?
-          echo "===== BUILD ERROR ====="
-          grep -n -B 8 -A 20 -E "What went wrong:|Execution failed for task|Could not|error:" build.log || tail -n 120 build.log
-          echo "===== END BUILD ERROR ====="
-          exit 0
+
+          echo "===== GRADLE BUILD LOG ====="
+          cat build.log
+          echo "===== END GRADLE BUILD LOG ====="
+
+          if [ "$result" -ne 0 ]; then
+            echo "BUILD_STATUS=FAILED"
+            exit "$result"
+          fi
+
+          echo "BUILD_STATUS=SUCCESS"
 
       - name: Upload build log
         if: always()
@@ -59,10 +67,10 @@ jobs:
           if-no-files-found: warn
 
       - name: Search for APK
-        if: always()
+        if: success()
         run: |
           echo "===== APK FILES ====="
-          find . -type f -name "*.apk" -print || true
+          find app/build/outputs -type f -name "*.apk" -print
 
       - name: Upload APK
         if: success()
@@ -70,4 +78,4 @@ jobs:
         with:
           name: RinAI-debug-APK
           path: app/build/outputs/**/*.apk
-          if-no-files-found: warn
+          if-no-files-found: error
