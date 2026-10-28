@@ -37,9 +37,12 @@ jobs:
           print("Manifest OK")
           PY
 
-      - name: Build APK
-        run: gradle assembleDebug --stacktrace
-
+ - name: Build APK
+  run: |
+    gradle assembleDebug --stacktrace --info > build.log 2>&1
+    RESULT=$?
+    grep -n -B 5 -A 12 -E "What went wrong:|e: file:|error:" build.log || tail -n 80 build.log
+    exit $RESULT
       - name: Find APK
         run: |
           echo "=== Searching for APK files ==="
