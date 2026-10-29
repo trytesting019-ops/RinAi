@@ -1,21 +1,24 @@
-<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET" />
 
-<application
-    android:label="Rin AI"
-    android:allowBackup="false"
-    android:usesCleartextTraffic="false"
-    android:theme="@android:style/Theme.Material.Light.NoActionBar">
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <activity
-        android:name="my.rinai.offline.MainActivity"
-        android:exported="true">
+    <uses-permission android:name="android.permission.INTERNET" />
 
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
+    <application
+        android:label="Rin AI"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
-    </activity>
-</application>
+        <activity
+            android:name="my.rinai.offline.MainActivity"
+            android:exported="true">
 
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+    </application>
 </manifest>
