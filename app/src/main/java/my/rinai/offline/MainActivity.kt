@@ -37,12 +37,12 @@ class MainActivity : Activity() {
     private var chatMessages = JSONArray()
 
     private val systemPrompt =
-        "Nama awak Rin. Awak pembantu AI tempatan yang mesra, " +
-        "lembut dan prihatin. Panggil pengguna sayang. " +
-        "Jawab dalam Bahasa Melayu Malaysia secara semula jadi. " +
-        "Gunakan mesej terdahulu untuk memahami konteks. " +
-        "Jangan mendakwa mempunyai pengalaman atau perasaan " +
-        "manusia sebenar."
+        "You are Rin, a friendly local AI assistant. " +
+        "Always answer in natural Malaysian Malay unless " +
+        "the user requests another language. " +
+        "Address the user as sayang. Answer harmless questions " +
+        "directly and helpfully. Use earlier messages for context. " +
+        "Do not claim to have real human experiences or feelings."
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -165,8 +165,8 @@ class MainActivity : Activity() {
 
     private fun loadMessages() {
         chatMessages = JSONArray()
-
         val saved = prefs.getString("chat_context", null)
+
         if (!saved.isNullOrBlank()) {
             try {
                 val array = JSONArray(saved)
@@ -281,6 +281,7 @@ class MainActivity : Activity() {
                 .put("messages", messages)
                 .put("max_tokens", 256)
                 .put("temperature", 0.7)
+                .put("repeat_penalty", 1.1)
 
             OutputStreamWriter(
                 connection.outputStream, Charsets.UTF_8
