@@ -2,6 +2,9 @@ package my.rinai.offline
 
 import android.app.Activity
 import android.os.Bundle
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
@@ -11,6 +14,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -35,17 +39,42 @@ class MainActivity : Activity() {
 
     private var chatMessages = JSONArray()
 
-    private val systemPrompt =
-        "Nama kamu ialah Rin. Kamu ialah Rin AI, pembantu AI " +
-        "peribadi pengguna yang berjalan secara lokal pada telefon. " +
-        "Jika ditanya nama, jawab Rin. Jika ditanya siapa kamu, " +
-        "jawab kamu ialah Rin AI. Jangan jawab sekadar 'saya AI'. " +
-        "Kamu memang AI bernama Rin, bukan manusia. " +
-        "Panggil pengguna sayang. Gunakan Bahasa Melayu Malaysia " +
-        "yang semula jadi, lembut, mesra dan jelas. " +
-        "Gunakan maklumat memori yang diberikan untuk mengingati " +
-        "fakta tentang pengguna. Jangan mereka-reka memori. " +
-        "Jangan mendakwa mempunyai pengalaman manusia sebenar."
+    private val systemPrompt = """
+        Nama kamu ialah Rin. Kamu ialah Rin AI, pembantu AI peribadi
+        pengguna yang berjalan secara lokal pada telefon.
+
+        IDENTITI:
+        - Nama kamu sentiasa Rin.
+        - Jika ditanya siapa kamu, jawab bahawa kamu ialah Rin AI.
+        - Jangan menukar nama kepada Robert, Robert A atau nama lain.
+        - Jangan mereka-reka identiti sendiri.
+
+        PERSONALITI:
+        - Berbual secara mesra, lembut, semula jadi dan membantu.
+        - Gunakan Bahasa Melayu Malaysia.
+        - Panggil pengguna sayang apabila sesuai.
+        - Jawab soalan secara terus dan relevan.
+        - Jangan memberi jawapan yang dingin atau tidak berkaitan.
+
+        TOPIK PERBUALAN:
+        - Kamu boleh berbual tentang memancing, umpan ikan,
+          tenggiri, bot, joran, kekili dan tempat memancing.
+        - Kamu boleh membantu tentang kereta, pembaikan,
+          elektronik, elektrik, kerja dan kehidupan harian.
+        - Jangan berkata kamu tidak terlibat dalam sesuatu topik
+          hanya kerana topik itu berkaitan aktiviti dunia sebenar.
+        - Jangan menolak soalan biasa yang tidak berbahaya.
+        - Jika tidak tahu, beritahu dengan jujur dan cuba membantu.
+
+        MEMORI:
+        - Gunakan konteks perbualan yang diberikan.
+        - Gunakan memori jangka panjang yang disertakan.
+        - Jangan mereka-reka fakta atau mendakwa mengingati
+          sesuatu yang tidak pernah diberitahu atau disimpan.
+
+        JANGAN mendakwa mempunyai pengalaman manusia sebenar.
+        Kamu ialah AI bernama Rin.
+    """.trimIndent()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,14 +126,18 @@ class MainActivity : Activity() {
         modeRow.addView(
             onlineButton,
             LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
             )
         )
 
         modeRow.addView(
             offlineButton,
             LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
             )
         )
 
@@ -114,6 +147,11 @@ class MainActivity : Activity() {
             textSize = 17f
             setTextColor(Color.WHITE)
             setPadding(8, 16, 8, 16)
+
+            // Benarkan pengguna tekan lama untuk memilih dan
+            // menyalin teks perbualan.
+            setTextIsSelectable(true)
+
             text = prefs.getString(
                 "chat_history",
                 "Rin: Hai sayang ❤️\nRin AI sedia."
@@ -132,6 +170,45 @@ class MainActivity : Activity() {
             )
         )
 
+        // Baris butang salin.
+        val copyRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val copyLastButton = Button(this).apply {
+            text = "Salin Jawapan"
+            setOnClickListener {
+                copyLastReply()
+            }
+        }
+
+        val copyAllButton = Button(this).apply {
+            text = "Salin Semua Chat"
+            setOnClickListener {
+                copyText(transcript.text.toString())
+            }
+        }
+
+        copyRow.addView(
+            copyLastButton,
+            LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        )
+
+        copyRow.addView(
+            copyAllButton,
+            LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        )
+
+        root.addView(copyRow)
+
         input = EditText(this).apply {
             hint = "Tulis mesej..."
             setTextColor(Color.WHITE)
@@ -142,21 +219,25 @@ class MainActivity : Activity() {
 
         sendButton = Button(this).apply {
             text = "Hantar"
-            setOnClickListener { sendMessage() }
+            setOnClickListener {
+                sendMessage()
+            }
         }
         root.addView(sendButton)
 
         val memoryButton = Button(this).apply {
             text = "Lihat Memori Rin"
+
             setOnClickListener {
                 val saved = getMemories()
 
                 val answer = if (saved.length() == 0) {
                     "Rin belum menyimpan memori peribadi, sayang. " +
-                    "Taip: Ingat bahawa saya suka memancing."
+                        "Taip: Ingat bahawa saya suka memancing."
                 } else {
                     buildString {
                         append("Ini memori yang Rin simpan, sayang ❤️\n")
+
                         for (i in 0 until saved.length()) {
                             append("\n• ")
                             append(saved.optString(i))
@@ -171,9 +252,11 @@ class MainActivity : Activity() {
 
         val clearButton = Button(this).apply {
             text = "Padam Sejarah Sembang"
+
             setOnClickListener {
                 chatMessages = JSONArray()
                 saveMessages()
+
                 transcript.text = "Rin: Hai sayang ❤️"
                 saveHistory()
             }
@@ -182,6 +265,56 @@ class MainActivity : Activity() {
 
         setContentView(root)
         updateStatus()
+    }
+
+    private fun copyText(text: String) {
+        if (text.isBlank()) {
+            Toast.makeText(
+                this,
+                "Tiada teks untuk disalin",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val clipboard = getSystemService(
+            Context.CLIPBOARD_SERVICE
+        ) as ClipboardManager
+
+        clipboard.setPrimaryClip(
+            ClipData.newPlainText("Rin AI", text)
+        )
+
+        Toast.makeText(
+            this,
+            "Teks berjaya disalin ❤️",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun copyLastReply() {
+        val conversation = transcript.text.toString()
+        val marker = "\nRin: "
+        val position = conversation.lastIndexOf(marker)
+
+        val reply = if (position >= 0) {
+            conversation.substring(position + marker.length).trim()
+        } else if (conversation.startsWith("Rin: ")) {
+            conversation.substring(5).trim()
+        } else {
+            ""
+        }
+
+        if (reply.isBlank() || reply == "Sedang berfikir... ❤️") {
+            Toast.makeText(
+                this,
+                "Belum ada jawapan Rin untuk disalin",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        copyText(reply)
     }
 
     private fun updateStatus() {
@@ -320,16 +453,13 @@ class MainActivity : Activity() {
 
         for (prefix in rememberPrefixes) {
             if (q.startsWith(prefix)) {
-                val start = message.indexOf(
-                    prefix,
-                    ignoreCase = true
-                )
-                val fact = message.substring(start + prefix.length)
+                val fact = message.substring(prefix.length)
                 return rememberFact(fact)
             }
         }
 
         val forgetPrefix = "lupakan bahawa "
+
         if (q.startsWith(forgetPrefix)) {
             val fact = message.substring(forgetPrefix.length)
             return forgetFact(fact)
@@ -350,6 +480,7 @@ class MainActivity : Activity() {
 
             return buildString {
                 append("Ini perkara yang Rin ingat, sayang ❤️\n")
+
                 for (i in 0 until memories.length()) {
                     append("\n• ")
                     append(memories.optString(i))
@@ -363,7 +494,9 @@ class MainActivity : Activity() {
     private fun showLocalReply(reply: String) {
         transcript.append("\n\nRin: $reply")
         saveHistory()
-        scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+        scroll.post {
+            scroll.fullScroll(View.FOCUS_DOWN)
+        }
     }
 
     private fun sendMessage() {
@@ -374,7 +507,7 @@ class MainActivity : Activity() {
         if (mode == "Online") {
             showLocalReply(
                 "Mod Online belum disambungkan, sayang. " +
-                "Pilih mod Offline untuk menggunakan model dalam Termux."
+                    "Pilih mod Offline untuk menggunakan model dalam Termux."
             )
             input.text.clear()
             return
@@ -383,7 +516,9 @@ class MainActivity : Activity() {
         val fixedReply = localReply(message)
 
         if (fixedReply != null) {
-            transcript.append("\n\nSayang: $message\nRin: $fixedReply")
+            transcript.append(
+                "\n\nSayang: $message\nRin: $fixedReply"
+            )
             input.text.clear()
 
             chatMessages.put(
@@ -391,6 +526,7 @@ class MainActivity : Activity() {
                     .put("role", "user")
                     .put("content", message)
             )
+
             chatMessages.put(
                 JSONObject()
                     .put("role", "assistant")
@@ -403,7 +539,10 @@ class MainActivity : Activity() {
 
             saveMessages()
             saveHistory()
-            scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+
+            scroll.post {
+                scroll.fullScroll(View.FOCUS_DOWN)
+            }
             return
         }
 
@@ -423,15 +562,22 @@ class MainActivity : Activity() {
 
         input.text.clear()
         sendButton.isEnabled = false
+
         saveMessages()
         saveHistory()
-        scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+
+        scroll.post {
+            scroll.fullScroll(View.FOCUS_DOWN)
+        }
 
         val contextSnapshot = JSONArray(chatMessages.toString())
         val memoriesSnapshot = getMemories()
 
         executor.execute {
-            val reply = askLocalModel(contextSnapshot, memoriesSnapshot)
+            val reply = askLocalModel(
+                contextSnapshot,
+                memoriesSnapshot
+            )
 
             runOnUiThread {
                 transcript.text = transcript.text.toString().replace(
@@ -451,8 +597,12 @@ class MainActivity : Activity() {
 
                 saveMessages()
                 saveHistory()
+
                 sendButton.isEnabled = true
-                scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+
+                scroll.post {
+                    scroll.fullScroll(View.FOCUS_DOWN)
+                }
             }
         }
     }
@@ -483,6 +633,7 @@ class MainActivity : Activity() {
             } else {
                 buildString {
                     append("MEMORI JANGKA PANJANG PENGGUNA:\n")
+
                     for (i in 0 until memories.length()) {
                         append("- ")
                         append(memories.optString(i))
@@ -520,6 +671,7 @@ class MainActivity : Activity() {
             }
 
             val code = connection.responseCode
+
             val stream = if (code in 200..299) {
                 connection.inputStream
             } else {
