@@ -20,7 +20,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
+dependencies {
+implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+}
     kotlinOptions {
         jvmTarget = "17"
     }
