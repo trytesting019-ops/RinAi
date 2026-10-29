@@ -34,8 +34,7 @@ class MainActivity : Activity() {
         getSharedPreferences("rin_ai_data", MODE_PRIVATE)
     }
 
-    // Sejarah mesej untuk konteks model.
-    private val chatMessages = JSONArray()
+    private var chatMessages = JSONArray()
 
     private val systemPrompt =
         "Nama awak Rin. Awak pembantu AI tempatan yang mesra, " +
@@ -47,7 +46,6 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         loadMessages()
 
         val root = LinearLayout(this).apply {
@@ -124,8 +122,7 @@ class MainActivity : Activity() {
             scroll,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                0, 1f
             )
         )
 
@@ -146,7 +143,8 @@ class MainActivity : Activity() {
         val clearButton = Button(this).apply {
             text = "Padam Sejarah Sembang"
             setOnClickListener {
-                chatMessages.clear()
+                chatMessages = JSONArray()
+                saveMessages()
                 transcript.text = "Rin: Hai sayang ❤️"
                 saveHistory()
             }
@@ -166,7 +164,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadMessages() {
-        chatMessages.clear()
+        chatMessages = JSONArray()
 
         val saved = prefs.getString("chat_context", null)
         if (!saved.isNullOrBlank()) {
@@ -178,7 +176,7 @@ class MainActivity : Activity() {
                     chatMessages.put(array.getJSONObject(i))
                 }
             } catch (_: Exception) {
-                chatMessages.clear()
+                chatMessages = JSONArray()
             }
         }
     }
@@ -191,8 +189,7 @@ class MainActivity : Activity() {
 
     private fun sendMessage() {
         val message = input.text.toString().trim()
-        if (message.isEmpty()) return
-        if (!sendButton.isEnabled) return
+        if (message.isEmpty() || !sendButton.isEnabled) return
 
         if (mode == "Online") {
             transcript.append(
@@ -211,7 +208,6 @@ class MainActivity : Activity() {
                 .put("content", message)
         )
 
-        // Hadkan sejarah kepada 12 mesej terakhir.
         while (chatMessages.length() > 12) {
             chatMessages.remove(0)
         }
@@ -225,20 +221,17 @@ class MainActivity : Activity() {
         saveHistory()
         scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
 
-        // Salin konteks semasa supaya ia tidak berubah ketika permintaan berjalan.
         val contextSnapshot = JSONArray(chatMessages.toString())
 
         executor.execute {
             val reply = askLocalModel(contextSnapshot)
 
             runOnUiThread {
-                val current = transcript.text.toString()
-                transcript.text = current.replace(
+                transcript.text = transcript.text.toString().replace(
                     "Rin: Sedang berfikir... ❤️",
                     "Rin: $reply"
                 )
 
-                // Simpan jawapan model sebagai konteks assistant.
                 chatMessages.put(
                     JSONObject()
                         .put("role", "assistant")
