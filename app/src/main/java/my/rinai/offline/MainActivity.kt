@@ -68,7 +68,7 @@ class MainActivity : Activity() {
 
         prefs = getSharedPreferences("rin_ai_data", MODE_PRIVATE)
 
-        onlineMode = prefs.getBoolean("online_mode", false)
+        onlineMode = prefs.getBoolean("online_mode", true)
 
         loadContext()
         buildInterface()
@@ -287,19 +287,20 @@ class MainActivity : Activity() {
                     answer = askGemini()
                     source = "AI dalam talian"
                 } catch (e: Exception) {
-                    source = "AI tempatan (fallback)"
+                    answer = "Rin gagal menyambung ke AI dalam talian. " +
+                        (e.message ?: "Semak internet dan API key.")
+                    source = "Ralat AI dalam talian"
                 }
-            }
-
-            if (answer.isNullOrBlank()) {
+            } else {
                 try {
                     answer = askLocalModel()
-                    if (source.isEmpty()) source = "AI tempatan"
+                    source = "AI tempatan"
                 } catch (e: Exception) {
-                    answer = "Rin tidak dapat menyambung ke model AI.\n" +
-                        "Semak sambungan internet atau pastikan " +
-                        "llama-server sedang berjalan dalam Termux.\n" +
-                        "Butiran: ${e.message ?: "ralat sambungan"}"
+                    answer = "Rin tidak dapat menyambung ke model AI tempatan. " +
+                        "Jika menggunakan mod luar talian, pastikan llama-server " +
+                        "sedang berjalan pada port 8080. Butiran: " +
+                        (e.message ?: "ralat sambungan")
+                    source = "Ralat AI tempatan"
                 }
             }
 
