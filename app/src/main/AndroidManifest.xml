@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -13,12 +12,29 @@
         <activity
             android:name="my.rinai.offline.MainActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
+
+        <service
+            android:name="my.rinai.offline.RinVoiceInteractionService"
+            android:label="Rin AI"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.voice_interaction_service"
+                android:resource="@xml/rin_voice_interaction_service" />
+        </service>
+
+        <service
+            android:name="my.rinai.offline.RinVoiceInteractionSessionService"
+            android:label="Rin AI Session"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true" />
     </application>
 </manifest>
