@@ -284,7 +284,7 @@ class MainActivity : Activity() {
 
             if (onlineMode) {
                 try {
-                    answer = askGemini()
+                    answer = askGeminiWithRetry()
                     source = "AI dalam talian"
                 } catch (e: Exception) {
                     answer = "Rin gagal menyambung ke AI dalam talian. " +
@@ -398,6 +398,35 @@ class MainActivity : Activity() {
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun askGeminiWithRetry(): String {
+        val delays = longArrayOf(2000L, 5000L, 10000L)
+        var lastError: Exception? = null
+
+        for (attempt in 0..delays.size) {
+            try {
+                return askGemini()
+            } catch (e: Exception) {
+                lastError = e
+                val message = e.message ?: ""
+                val isTemporary = message.contains("HTTP 503") ||
+                    message.contains("UNAVAILABLE") ||
+                    message.contains("HTTP 429") ||
+                    message.contains("RESOURCE_EXHAUSTED")
+
+                if (!isTemporary || attempt == delays.size) {
+                    throw e
+                }
+
+                runOnUiThread {
+                    updateStatus("Gemini sibuk — Rin cuba semula (${attempt + 1}/${delays.size})...")
+                }
+                Thread.sleep(delays[attempt])
+            }
+        }
+
+        throw lastError ?: Exception("Sambungan Gemini gagal selepas percubaan semula.")
     }
 
     private fun askGemini(): String {
