@@ -6,6 +6,10 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -76,53 +80,92 @@ class MainActivity : Activity() {
     }
 
     private fun buildInterface() {
+        val bg = Color.rgb(10, 12, 25)
+        val panel = Color.rgb(22, 25, 45)
+        val accent = Color.rgb(111, 91, 255)
+        val muted = Color.rgb(164, 171, 199)
+        val white = Color.rgb(245, 246, 255)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(20, 20, 20, 12)
+            setPadding(18, 18, 18, 14)
+            setBackgroundColor(bg)
         }
 
-        val title = TextView(this).apply {
-            text = "Rin AI Hybrid"
-            textSize = 24f
-            setPadding(0, 0, 0, 8)
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(16, 14, 16, 14)
+            background = roundedBackground(panel, 22)
         }
-        root.addView(title)
+
+        val brandColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val title = TextView(this).apply {
+            text = "RIN"
+            textSize = 23f
+            setTextColor(white)
+            typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.12f
+        }
+        val subtitle = TextView(this).apply {
+            text = "AI PERSONAL ASSISTANT"
+            textSize = 10f
+            setTextColor(muted)
+            letterSpacing = 0.12f
+        }
+        brandColumn.addView(title)
+        brandColumn.addView(subtitle)
+        header.addView(brandColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        val apiButton = makeButton("API") { showApiKeyDialog() }.apply {
+            setTextColor(white)
+            background = roundedBackground(accent, 16)
+        }
+        header.addView(apiButton)
+        root.addView(header)
 
         status = TextView(this).apply {
-            textSize = 13f
-            setPadding(0, 0, 0, 8)
+            textSize = 12f
+            setTextColor(muted)
+            setPadding(6, 12, 6, 12)
         }
         root.addView(status)
 
         val modeRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
-
-        modeRow.addView(makeButton("Luar Talian") {
+        modeRow.addView(makeButton("Luar talian") {
             onlineMode = false
             prefs.edit().putBoolean("online_mode", false).apply()
             updateStatus("Mod luar talian dipilih")
+        }.apply {
+            setTextColor(white)
+            background = roundedBackground(panel, 16)
         }, weightedParams())
-
-        modeRow.addView(makeButton("Dalam Talian") {
+        modeRow.addView(makeButton("Dalam talian") {
             onlineMode = true
             prefs.edit().putBoolean("online_mode", true).apply()
             updateStatus("Mod dalam talian dipilih")
+        }.apply {
+            setTextColor(white)
+            background = roundedBackground(panel, 16)
         }, weightedParams())
-
-        modeRow.addView(makeButton("API") {
-            showApiKeyDialog()
-        }, weightedParams())
-
         root.addView(modeRow)
 
-        scroll = ScrollView(this)
+        scroll = ScrollView(this).apply {
+            isFillViewport = true
+            background = roundedBackground(Color.rgb(16, 19, 35), 20)
+            clipToOutline = true
+        }
         transcript = TextView(this).apply {
             textSize = 16f
+            setTextColor(white)
             setTextIsSelectable(true)
-            setPadding(8, 12, 8, 12)
+            setPadding(16, 18, 16, 18)
+            setLineSpacing(5f, 1.0f)
         }
-
         scroll.addView(
             transcript,
             FrameLayout.LayoutParams(
@@ -130,24 +173,34 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         )
-
         root.addView(
             scroll,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
                 1f
-            )
+            ).apply {
+                topMargin = 8
+                bottomMargin = 10
+            }
         )
 
+        val composer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 8, 12, 8)
+            background = roundedBackground(panel, 20)
+        }
         input = EditText(this).apply {
-            hint = "Tanya Rin..."
+            hint = "Mesej Rin..."
             textSize = 16f
             minLines = 1
             maxLines = 4
+            setTextColor(white)
+            setHintTextColor(muted)
+            setPadding(8, 8, 8, 8)
+            background = null
         }
-
-        root.addView(
+        composer.addView(
             input,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -157,38 +210,55 @@ class MainActivity : Activity() {
 
         val sendRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
-
         sendRow.addView(makeButton("Hantar") {
             sendMessage()
-        }, weightedParams())
-
-        sendRow.addView(makeButton("Salin Jawapan") {
+        }.apply {
+            setTextColor(Color.WHITE)
+            background = roundedBackground(accent, 16)
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f))
+        sendRow.addView(makeButton("Salin") {
             copyLastReply()
-        }, weightedParams())
-
-        sendRow.addView(makeButton("Salin Chat") {
-            copyText(transcript.text.toString())
-        }, weightedParams())
-
-        root.addView(sendRow)
+        }.apply {
+            setTextColor(white)
+            background = roundedBackground(Color.rgb(45, 49, 75), 16)
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f))
+        composer.addView(sendRow)
+        root.addView(composer)
 
         val toolsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
-
-        toolsRow.addView(makeButton("Memori Rin") {
+        toolsRow.addView(makeButton("Memori") {
             showMemories()
+        }.apply {
+            setTextColor(muted)
+            background = roundedBackground(bg, 14)
         }, weightedParams())
-
-        toolsRow.addView(makeButton("Padam Chat") {
+        toolsRow.addView(makeButton("Salin chat") {
+            copyText(transcript.text.toString())
+        }.apply {
+            setTextColor(muted)
+            background = roundedBackground(bg, 14)
+        }, weightedParams())
+        toolsRow.addView(makeButton("Padam chat") {
             confirmClearHistory()
+        }.apply {
+            setTextColor(muted)
+            background = roundedBackground(bg, 14)
         }, weightedParams())
-
         root.addView(toolsRow)
 
         setContentView(root)
-        updateStatus("Sedia")
+        updateStatus(if (onlineMode) "● Dalam talian — sedia" else "● Luar talian — sedia")
+    }
+
+    private fun roundedBackground(color: Int, radiusDp: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = radiusDp * resources.displayMetrics.density
+        }
     }
 
     private fun weightedParams() = LinearLayout.LayoutParams(
