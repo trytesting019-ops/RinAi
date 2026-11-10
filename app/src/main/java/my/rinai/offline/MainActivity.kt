@@ -409,7 +409,7 @@ class MainActivity : Activity() {
 
         val endpoint =
             "https://generativelanguage.googleapis.com/v1beta/" +
-            "models/gemini-2.5-flash:generateContent"
+            "models/gemini-3.8-flash:generateContent"
 
         val connection =
             URL(endpoint).openConnection() as HttpURLConnection
