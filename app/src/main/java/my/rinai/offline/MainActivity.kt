@@ -7,6 +7,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -36,13 +38,15 @@ class MainActivity : Activity() {
 
     private var onlineMode = false
     private var busy = false
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
 
     private val contextMessages = JSONArray()
 
     private val systemPrompt = """
         Nama awak ialah Rin, pembantu AI peribadi pengguna.
         Berkomunikasi dalam Bahasa Melayu Malaysia yang semula jadi,
-        mesra, tenang dan jelas. Panggil pengguna sayang jika sesuai.
+        mesra, tenang dan jelas. Jangan gunakan panggilan manja.
         Jangan mendakwa sebagai manusia atau mendakwa mempunyai
         perasaan sebenar.
 
@@ -70,6 +74,7 @@ class MainActivity : Activity() {
         onlineMode = prefs.getBoolean("online_mode", false)
 
         loadContext()
+        initTextToSpeech()
         buildInterface()
         showSavedHistory()
     }
@@ -81,7 +86,10 @@ class MainActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "Rin AI Hybrid"
+            text = "RIN AI"
+            textSize = 26f
+            setTextColor(android.graphics.Color.rgb(35, 38, 75))
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
             textSize = 24f
             setPadding(0, 0, 0, 8)
         }
@@ -259,12 +267,13 @@ class MainActivity : Activity() {
         if (question.isEmpty()) return
 
         input.setText("")
-        appendLine("Sayang: $question")
+        appendLine("Saya: $question")
 
         val localAnswer = localReply(question)
 
         if (localAnswer != null) {
             appendLine("Rin: $localAnswer")
+            speakAnswer(localAnswer)
             addContext("user", question)
             addContext("assistant", localAnswer)
             saveContext()
@@ -306,12 +315,66 @@ class MainActivity : Activity() {
 
             runOnUiThread {
                 appendLine("Rin: $finalAnswer")
+                speakAnswer(finalAnswer)
                 addContext("assistant", finalAnswer)
                 saveContext()
                 busy = false
                 updateStatus("Selesai — $source")
             }
         }
+    }
+
+
+    private fun initTextToSpeech() {
+        tts = TextToSpeech(this) { result ->
+            runOnUiThread {
+                ttsReady = result == TextToSpeech.SUCCESS
+                if (ttsReady) {
+                    val malay = tts?.setLanguage(Locale("ms", "MY"))
+                    if (malay == TextToSpeech.LANG_MISSING_DATA ||
+                        malay == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        val fallback = tts?.setLanguage(Locale("id", "ID"))
+                        if (fallback == TextToSpeech.LANG_MISSING_DATA ||
+                            fallback == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            tts?.setLanguage(Locale.getDefault())
+                        }
+                    }
+                    tts?.setSpeechRate(0.94f)
+                    tts?.setPitch(1.02f)
+                } else {
+                    updateStatus("Suara belum tersedia — semak enjin TTS peranti")
+                }
+            }
+        }
+    }
+
+    private fun speakAnswer(text: String) {
+        val cleanText = text.trim()
+        if (cleanText.isEmpty()) return
+        if (!ttsReady || tts == null) {
+            updateStatus("Jawapan dipaparkan — enjin suara belum sedia")
+            return
+        }
+        val utteranceId = "rin-${System.currentTimeMillis()}"
+        tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        updateStatus("Rin sedang bercakap...")
+        tts?.setOnUtteranceProgressListener(
+            object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(id: String?) {
+                    runOnUiThread { updateStatus("Rin sedang bercakap...") }
+                }
+                override fun onDone(id: String?) {
+                    runOnUiThread { updateStatus("Selesai — suara tamat") }
+                }
+                @Deprecated("Deprecated in Java")
+                override fun onError(id: String?) {
+                    runOnUiThread { updateStatus("Jawapan siap, tetapi suara gagal dimainkan") }
+                }
+                override fun onError(id: String?, errorCode: Int) {
+                    runOnUiThread { updateStatus("Jawapan siap, tetapi suara gagal dimainkan") }
+                }
+            }
+        )
     }
 
     private fun addContext(role: String, content: String) {
@@ -531,7 +594,7 @@ class MainActivity : Activity() {
             q.contains("nama awak") ||
             q.contains("who are you")
         ) {
-            return "Rin ialah pembantu AI peribadi sayang dalam aplikasi Rin AI."
+            return "Rin ialah pembantu AI peribadi dalam aplikasi Rin AI."
         }
 
         if (
@@ -589,7 +652,7 @@ class MainActivity : Activity() {
             (q.contains("umpan") || q.contains("bait")) &&
             (q.contains("tenggiri") || q.contains("tengiri"))
         ) {
-            return "Untuk tenggiri, sayang boleh cuba ikan kembung, " +
+            return "Untuk tenggiri, boleh cuba ikan kembung, "
                 "selayang, tamban atau sotong. Umpan hidup dan teknik " +
                 "hanyut atau trolling boleh dicuba mengikut arus dan " +
                 "keadaan lokasi. Pastikan perambut sesuai dengan gigi ikan."
@@ -712,6 +775,9 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
         executor.shutdown()
         super.onDestroy()
     }
