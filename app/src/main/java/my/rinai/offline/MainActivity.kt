@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private var busy = false
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var pendingSpeech: String? = null
 
     private val contextMessages = JSONArray()
 
@@ -341,6 +342,10 @@ class MainActivity : Activity() {
                     }
                     tts?.setSpeechRate(0.94f)
                     tts?.setPitch(1.02f)
+                    pendingSpeech?.let { queued ->
+                        pendingSpeech = null
+                        speakAnswer(queued)
+                    }
                 } else {
                     updateStatus("Suara belum tersedia — semak enjin TTS peranti")
                 }
@@ -352,12 +357,10 @@ class MainActivity : Activity() {
         val cleanText = text.trim()
         if (cleanText.isEmpty()) return
         if (!ttsReady || tts == null) {
-            updateStatus("Jawapan dipaparkan — enjin suara belum sedia")
+            pendingSpeech = cleanText
+            updateStatus("Jawapan diterima — menyediakan suara...")
             return
         }
-        val utteranceId = "rin-${System.currentTimeMillis()}"
-        tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-        updateStatus("Rin sedang bercakap...")
         tts?.setOnUtteranceProgressListener(
             object : android.speech.tts.UtteranceProgressListener() {
                 override fun onStart(id: String?) {
@@ -375,6 +378,8 @@ class MainActivity : Activity() {
                 }
             }
         )
+        val utteranceId = "rin-" + System.currentTimeMillis()
+        tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
     }
 
     private fun addContext(role: String, content: String) {
