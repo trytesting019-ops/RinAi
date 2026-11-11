@@ -83,7 +83,8 @@ class MainActivity : Activity() {
     private fun buildInterface() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(20, 20, 20, 12)
+            setPadding(18, 18, 18, 14)
+            setBackgroundColor(android.graphics.Color.rgb(242, 244, 252))
         }
 
         val title = TextView(this).apply {
@@ -94,11 +95,17 @@ class MainActivity : Activity() {
             textSize = 24f
             setPadding(0, 0, 0, 8)
         }
+        title.setPadding(18, 18, 18, 12)
+        title.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(android.graphics.Color.rgb(226, 229, 250))
+            cornerRadius = 24f
+        }
         root.addView(title)
 
         status = TextView(this).apply {
             textSize = 13f
-            setPadding(0, 0, 0, 8)
+            setTextColor(android.graphics.Color.rgb(73, 79, 125))
+            setPadding(8, 12, 8, 12)
         }
         root.addView(status)
 
@@ -127,8 +134,13 @@ class MainActivity : Activity() {
         scroll = ScrollView(this)
         transcript = TextView(this).apply {
             textSize = 16f
+            setTextColor(android.graphics.Color.rgb(35, 38, 60))
             setTextIsSelectable(true)
-            setPadding(8, 12, 8, 12)
+            setPadding(14, 16, 14, 16)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(android.graphics.Color.WHITE)
+                cornerRadius = 22f
+            }
         }
 
         scroll.addView(
@@ -149,10 +161,16 @@ class MainActivity : Activity() {
         )
 
         input = EditText(this).apply {
-            hint = "Tanya Rin..."
+            hint = "Tulis mesej kepada Rin..."
             textSize = 16f
             minLines = 1
             maxLines = 4
+            setPadding(16, 12, 16, 12)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(android.graphics.Color.WHITE)
+                cornerRadius = 18f
+                setStroke(1, android.graphics.Color.rgb(211, 215, 238))
+            }
         }
 
         root.addView(
@@ -316,11 +334,11 @@ class MainActivity : Activity() {
 
             runOnUiThread {
                 appendLine("Rin: $finalAnswer")
-                speakAnswer(finalAnswer)
                 addContext("assistant", finalAnswer)
                 saveContext()
                 busy = false
-                updateStatus("Selesai — $source")
+                updateStatus("Jawapan diterima — menyediakan suara ($source)")
+                speakAnswer(finalAnswer)
             }
         }
     }
