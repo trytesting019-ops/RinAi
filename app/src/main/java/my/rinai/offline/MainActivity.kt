@@ -2,6 +2,10 @@
 package my.rinai.offline
 
 import android.app.Activity
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.speech.RecognizerIntent
 import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -185,6 +189,10 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
         }
 
+        sendRow.addView(makeButton("Mikrofon") {
+            startVoiceInput()
+        }, weightedParams())
+
         sendRow.addView(makeButton("Hantar") {
             sendMessage()
         }, weightedParams())
@@ -343,6 +351,67 @@ class MainActivity : Activity() {
         }
     }
 
+
+    private val voiceRequestCode = 7314
+    private val audioPermissionRequestCode = 7315
+
+    private fun startVoiceInput() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), audioPermissionRequestCode)
+            return
+        }
+        launchVoiceRecognizer()
+    }
+
+    private fun launchVoiceRecognizer() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ms-MY")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ms-MY")
+            putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Cakap dengan Rin dalam Bahasa Melayu")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        }
+        try {
+            updateStatus("Mendengar...")
+            startActivityForResult(intent, voiceRequestCode)
+        } catch (_: Exception) {
+            updateStatus("Servis pengecaman suara tidak tersedia pada peranti")
+            Toast.makeText(this, "Pasang atau aktifkan servis pengecaman suara pada telefon.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == audioPermissionRequestCode) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                launchVoiceRecognizer()
+            } else {
+                updateStatus("Kebenaran mikrofon ditolak")
+                Toast.makeText(this, "Benarkan akses mikrofon untuk bercakap dengan Rin.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Android API; retained for broad device compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == voiceRequestCode) {
+            if (resultCode == Activity.RESULT_OK) {
+                val matches = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                val spokenText = matches?.firstOrNull()?.trim().orEmpty()
+                if (spokenText.isNotBlank()) {
+                    input.setText(spokenText)
+                    input.setSelection(input.text.length)
+                    updateStatus("Suara berjaya ditukar kepada teks")
+                } else {
+                    updateStatus("Tiada percakapan dikesan")
+                }
+            } else {
+                updateStatus("Pengecaman suara dibatalkan atau gagal")
+            }
+        }
+    }
 
     private fun initTextToSpeech() {
         tts = TextToSpeech(this) { result ->
